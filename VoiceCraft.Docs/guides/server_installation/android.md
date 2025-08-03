@@ -1,3 +1,3 @@
-# Getting Started
+# เริ่มต้น
 
-Use In-App Server
+ใช้เปิดเซิฟเวอร์ในแอป จบ...

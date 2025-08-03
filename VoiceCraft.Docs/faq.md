@@ -1,49 +1,49 @@
-# FAQ
+# คำถามที่พบบ่อย
 
-Commonly asked questions about VoiceCraft.
+คำถามที่ถามบ่อยเกี่ยวกับ VoiceCraft
 
-## How do I find the VoiceCraft server's IP address and port?
+## ฉันจะหาที่อยู่ IP และพอร์ตของเซิร์ฟเวอร์ VoiceCraft ได้อย่างไร?
 
-To find the IP address and port for your server.
+วิธีการหาที่อยู่ IP และพอร์ตสำหรับเซิร์ฟเวอร์ของคุณ
 
-# [Local Network](#tab/localNetwork)
+# [เครือข่ายท้องถิ่น](#tab/localNetwork)
 
-You can type `ipconfig` in terminal and locate the IPV4 address (Windows). Your port is given to you in VoiceCraft console.
+คุณสามารถพิมพ์ `ipconfig` ใน terminal และหาที่อยู่ IPV4 (Windows) พอร์ตจะแสดงให้คุณเห็นใน VoiceCraft console
 
-# [Internet Network](#tab/internetNetwork)
+# [เครือข่ายอินเทอร์เน็ต](#tab/internetNetwork)
 
-You can find your IP address at https://whatismyipaddress.com/. You must visit this website from the device where your server is hosted. Your port is given to you in VoiceCraft console.
+คุณสามารถหาที่อยู่ IP ของคุณได้ที่ https://whatismyipaddress.com/ คุณต้องเข้าชมเว็บไซต์นี้จากอุปกรณ์ที่เซิร์ฟเวอร์ของคุณใช้งานอยู่ พอร์ตจะแสดงให้คุณเห็นใน VoiceCraft console
 
 ---
 
-## Does VoiceCraft work on mobile?
+## VoiceCraft ทำงานบนมือถือได้ไหม?
 
-**YES** it does, iOS and Android 6+ are supported.
+**ได้** ใช้ได้ รองรับ iOS และ Android 6+ ขึ้นไป
 
-## Do all players have to download the app for it to work?
+## ผู้เล่นทุกคนต้องดาวน์โหลดแอปเพื่อให้ทำงานได้ไหม?
 
-**YES**. Not the server though. Just the client app.
+**ใช่** แต่ไม่ใช่เซิร์ฟเวอร์ แค่แอปลูกค้าเท่านั้น
 
-## Can you make it pocketmine compatible?
+## คุณสามารถทำให้เข้ากันได้กับ pocketmine ได้ไหม?
 
-No. I will only be providing resources to vanilla BDS. You can make the pocketmine port yourself if you wanted to. Which in that case you can look at the addon and take the protocols from there and port to a pocketmine plugin.
+ไม่ได้ ฉันจะให้ทรัพยากรสำหรับ vanilla BDS เท่านั้น คุณสามารถสร้างพอร์ต pocketmine เองได้หากต้องการ ซึ่งในกรณีนั้นคุณสามารถดูแอดออนและนำโปรโตคอลจากที่นั่นมาพอร์ตเป็นปลั๊กอิน pocketmine
 
-## Will VoiceCraft work if I am using Apex Hosting, Aternos or some other minecraft hosting provider?
+## VoiceCraft จะทำงานได้ไหมถ้าฉันใช้ Apex Hosting, Aternos หรือผู้ให้บริการโฮสติ้งมายคราฟต์อื่นๆ?
 
-Depends. If your hosting provider allows communication from minecraft server to VoiceCraft server then yes. It will work. However you need to host the VoiceCraft server on a server with the MCComm port open and forwarded in order for communication to happen. For Aternos, no.
+ขึ้นอยู่กับสถานการณ์ หากผู้ให้บริการโฮสติ้งของคุณอนุญาตให้สื่อสารจากเซิร์ฟเวอร์มายคราฟต์ไปยังเซิร์ฟเวอร์ VoiceCraft ได้ ก็จะทำงานได้ อย่างไรก็ตาม คุณต้องโฮสต์เซิร์ฟเวอร์ VoiceCraft บนเซิร์ฟเวอร์ที่มีพอร์ต MCComm เปิดและฟอร์เวิร์ดเพื่อให้การสื่อสารเกิดขึ้นได้ สำหรับ Aternos ไม่ได้
 
-## Does VoiceCraft work on console?
+## VoiceCraft ทำงานบนคอนโซลได้ไหม?
 
-Not directly. But yes it will work **with** console but not **on** console. It has been confirmed and tested to work with console via server sided positioning but client sided **DOES NOT WORK**.
+ไม่ได้โดยตรง แต่ใช่ มันจะทำงาน **กับ** คอนโซลได้ แต่ไม่ได้ทำงาน **บน** คอนโซล มีการยืนยันและทดสอบแล้วว่าทำงานกับคอนโซลผ่านการจัดตำแหน่งฝั่งเซิร์ฟเวอร์ แต่ฝั่งลูกค้า **ไม่ทำงาน**
 
-## Does VoiceCraft work on realms?
+## VoiceCraft ทำงานบน realms ได้ไหม?
 
-Yes. Only with client sided positioning enabled.
+ได้ โดยต้องเปิดใช้งานการจัดตำแหน่งฝั่งลูกค้าเท่านั้น
 
-## Does VoiceCraft work with Java players on geyser servers?
+## VoiceCraft ทำงานกับผู้เล่น Java บนเซิร์ฟเวอร์ geyser ได้ไหม?
 
-Not directly, However there is a plugin readily available that makes VoiceCraft compatible with geyser servers. Otherwise no.
+ไม่ได้โดยตรง อย่างไรก็ตาม มีปลั๊กอินที่พร้อมใช้งานที่ทำให้ VoiceCraft เข้ากันได้กับเซิร์ฟเวอร์ geyser นอกจากนั้นแล้วไม่ได้
 
-## Can I host the server on mobile?
+## ฉันสามารถโฮสต์เซิร์ฟเวอร์บนมือถือได้ไหม?
 
-Yes, Through the in-app self hosting.
+ได้ ผ่านการโฮสต์ตัวเองในแอป

@@ -1,10 +1,18 @@
 # การดาวน์โหลด
 
-ไปที่ [Latest Release](https://github.com/AvionBlock/VoiceCraft/releases/latest) แล้วโหลดไฟล์ที่มีชื่อว่า `VoiceCraft.Android.apk`.
+ไปที่ [Latest Release](https://github.com/AvionBlock/VoiceCraft/releases/latest) แล้วดาวน์โหลดไฟล์ที่มีชื่อว่า `VoiceCraft.Android.apk`
 
 # การติดตั้ง
-ไปที่ที่มีไฟล์ชื่อ `VoiceCraft.Android.apk` file in andger file manager and open the file. This will open the android app installer (which may vary between devices and OS's) and click on the `install` button. If a google protection screen comes up, you can click on `More Info` and click on `Install Anyways`.
 
-# Launching
+ไปยังตำแหน่งที่เก็บไฟล์ `VoiceCraft.Android.apk` ผ่านแอปจัดการไฟล์ที่คุณใช้งานอยู่  
+แตะที่ไฟล์เพื่อเปิดตัวติดตั้งแอป (ลักษณะอาจแตกต่างกันไปตามระบบปฏิบัติการหรืออุปกรณ์ของคุณ)  
+จากนั้นกดปุ่ม `ติดตั้ง` เพื่อเริ่มการติดตั้ง
 
-You can just open the app like any normal mobile application in your home screen.
+<!-- ในอุปกรณ์ของฉันมันแสดงแบบนี้ และข้อมูลเพิ่มเติมก็ตรงกัน น่าจะใช้ได้เหมือนกัน -->
+
+> หากมีหน้าคำเตือนด้านความปลอดภัยของ Google ปรากฏขึ้น:  
+> กด `รายละเอียดเพิ่มเติม` แล้วเลือก `ยืนยันว่าจะติดตั้ง`
+
+# การเปิดใช้งาน
+
+คุณสามารถเปิดแอปได้เหมือนกับแอปอื่น ๆ บนหน้าจอหลักของคุณ

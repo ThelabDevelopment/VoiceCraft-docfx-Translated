@@ -1,3 +1,3 @@
-# Getting Started
+# เริ่มต้น
 
-May not be supported.
+น่าจะไม่รองรับ
