@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Jeek.Avalonia.Localization;
 using LiteNetLib;
 using VoiceCraft.Client.Network;
 using VoiceCraft.Client.Services;
 using VoiceCraft.Client.ViewModels.Data;
 using VoiceCraft.Core;
 using VoiceCraft.Core.Interfaces;
+using VoiceCraft.Core.Locales;
 using VoiceCraft.Core.Network.Packets;
+using VoiceCraft.Core.World;
 
 namespace VoiceCraft.Client.Processes;
 
@@ -30,17 +31,17 @@ public class VoipBackgroundProcess(
     //Audio
     private IAudioRecorder? _audioRecorder;
     private IDenoiser? _denoiser;
+    private string _description = string.Empty;
+    private bool _disconnected;
+    private string _disconnectReason = "VoiceCraft.DisconnectReason.Error";
     private IEchoCanceler? _echoCanceler;
     private IAutomaticGainController? _gainController;
 
     private bool _stopping;
     private bool _stopRequested;
-    private bool _disconnected;
-    private string _disconnectReason = "VoiceCraft.DisconnectReason.Error";
 
     //Displays
     private string _title = string.Empty;
-    private string _description = string.Empty;
 
     //Public Variables
     public bool HasEnded { get; private set; }
@@ -89,25 +90,28 @@ public class VoipBackgroundProcess(
             _voiceCraftClient.OnSetDescription += ClientOnSetDescription;
             _voiceCraftClient.OnMuteUpdated += ClientOnMuteUpdated;
             _voiceCraftClient.OnDeafenUpdated += ClientOnDeafenUpdated;
+            _voiceCraftClient.OnSpeakingUpdated += ClientOnSpeakingUpdated;
             _voiceCraftClient.World.OnEntityCreated += ClientWorldOnEntityCreated;
             _voiceCraftClient.World.OnEntityDestroyed += ClientWorldOnEntityDestroyed;
 
             //Setup audio recorder.
-            _audioRecorder = audioService.CreateAudioRecorder(Constants.SampleRate, Constants.Channels, Constants.Format);
+            _audioRecorder =
+                audioService.CreateAudioRecorder(Constants.SampleRate, Constants.Channels, Constants.Format);
             _audioRecorder.BufferMilliseconds = Constants.FrameSizeMs;
             _audioRecorder.SelectedDevice = audioSettings.InputDevice == "Default" ? null : audioSettings.InputDevice;
             _audioRecorder.OnDataAvailable += Write;
             _audioRecorder.OnRecordingStopped += OnRecordingStopped;
 
             //Setup audio player.
-            _audioPlayer = audioService.CreateAudioPlayer(Constants.SampleRate, Constants.Channels, Constants.Format);
+            _audioPlayer = audioService.CreateAudioPlayer(Constants.SampleRate, 2, Constants.Format);
             _audioPlayer.BufferMilliseconds = 100;
             _audioPlayer.SelectedDevice = audioSettings.OutputDevice == "Default" ? null : audioSettings.OutputDevice;
             _audioPlayer.OnPlaybackStopped += OnPlaybackStopped;
 
             //Setup Preprocessors
             _echoCanceler = audioService.GetEchoCanceler(audioSettings.EchoCanceler)?.Instantiate();
-            _gainController = audioService.GetAutomaticGainController(audioSettings.AutomaticGainController)?.Instantiate();
+            _gainController = audioService.GetAutomaticGainController(audioSettings.AutomaticGainController)
+                ?.Instantiate();
             _denoiser = audioService.GetDenoiser(audioSettings.Denoiser)?.Instantiate();
 
             //Initialize and start.
@@ -119,7 +123,8 @@ public class VoipBackgroundProcess(
             _audioRecorder.Start();
             _audioPlayer.Play();
 
-            while (_audioRecorder.CaptureState == CaptureState.Starting || _audioPlayer.PlaybackState == PlaybackState.Starting)
+            while (_audioRecorder.CaptureState == CaptureState.Starting ||
+                   _audioPlayer.PlaybackState == PlaybackState.Starting)
             {
                 if (_stopRequested)
                     return;
@@ -148,6 +153,7 @@ public class VoipBackgroundProcess(
         }
         catch (Exception ex)
         {
+            //TODO Locale This!
             notificationService.SendErrorNotification($"Voip Background Error: {ex.Message}");
             _disconnectReason = "VoiceCraft.DisconnectReason.Error";
             throw;
@@ -156,10 +162,11 @@ public class VoipBackgroundProcess(
         {
             HasEnded = true;
             OnDisconnected?.Invoke();
-            var localeReason = $"{Locales.Locales.VoiceCraft_Status_Disconnected.Replace("{reason}", Localizer.Get(_disconnectReason))}";
+            var localeReason =
+                $"{Locales.Locales.VoiceCraft_Status_Disconnected.Replace("{reason}", Localizer.Get(_disconnectReason))}";
             Title = localeReason;
             Description = localeReason;
-            notificationService.SendNotification(Locales.Locales.Notification_Badges_VoiceCraft, localeReason);
+            notificationService.SendNotification(localeReason, Locales.Locales.Notification_Badges_VoiceCraft);
 
             if (_audioRecorder != null)
             {
@@ -182,6 +189,7 @@ public class VoipBackgroundProcess(
             _voiceCraftClient.OnSetDescription -= ClientOnSetDescription;
             _voiceCraftClient.OnMuteUpdated -= ClientOnMuteUpdated;
             _voiceCraftClient.OnDeafenUpdated -= ClientOnDeafenUpdated;
+            _voiceCraftClient.OnSpeakingUpdated -= ClientOnSpeakingUpdated;
             _voiceCraftClient.World.OnEntityCreated -= ClientWorldOnEntityCreated;
             _voiceCraftClient.World.OnEntityDestroyed -= ClientWorldOnEntityDestroyed;
         }
@@ -207,6 +215,7 @@ public class VoipBackgroundProcess(
     public event Action? OnDisconnected;
     public event Action<bool>? OnUpdateMute;
     public event Action<bool>? OnUpdateDeafen;
+    public event Action<bool>? OnUpdateSpeaking;
     public event Action<EntityViewModel>? OnEntityAdded;
     public event Action<EntityViewModel>? OnEntityRemoved;
 
@@ -247,6 +256,11 @@ public class VoipBackgroundProcess(
     private void ClientOnDeafenUpdated(bool deafen, VoiceCraftEntity entity)
     {
         OnUpdateDeafen?.Invoke(deafen);
+    }
+
+    private void ClientOnSpeakingUpdated(bool speaking)
+    {
+        OnUpdateSpeaking?.Invoke(speaking);
     }
 
     private void ClientWorldOnEntityCreated(VoiceCraftEntity entity)

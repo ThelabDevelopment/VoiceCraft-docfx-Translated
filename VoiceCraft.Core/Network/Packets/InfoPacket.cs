@@ -5,7 +5,8 @@ namespace VoiceCraft.Core.Network.Packets
 {
     public class InfoPacket : VoiceCraftPacket
     {
-        public InfoPacket(string motd = "", int clients = 0, PositioningType positioningType = PositioningType.Server, int tick = 0)
+        public InfoPacket(string motd = "", int clients = 0, PositioningType positioningType = PositioningType.Server,
+            int tick = 0)
         {
             Motd = motd;
             Clients = clients;
@@ -33,8 +34,7 @@ namespace VoiceCraft.Core.Network.Packets
         {
             Motd = reader.GetString(Constants.MaxStringLength);
             Clients = reader.GetInt();
-            var positioningTypeValue = reader.GetByte();
-            PositioningType = Enum.IsDefined(typeof(PositioningType), positioningTypeValue) ? (PositioningType)positioningTypeValue : PositioningType.Unknown;
+            PositioningType = (PositioningType)reader.GetByte();
             Tick = reader.GetInt();
         }
     }

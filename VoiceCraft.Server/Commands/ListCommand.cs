@@ -1,6 +1,6 @@
 using System.CommandLine;
 using Spectre.Console;
-using VoiceCraft.Server.Data;
+using VoiceCraft.Core.World;
 using VoiceCraft.Server.Servers;
 
 namespace VoiceCraft.Server.Commands;
@@ -25,7 +25,8 @@ public class ListCommand : Command
         this.SetHandler((clientsOnly, limit) =>
             {
                 if (limit < 0)
-                    throw new ArgumentOutOfRangeException(nameof(limit), Locales.Locales.Commands_List_Exceptions_LimitArgument);
+                    throw new ArgumentOutOfRangeException(nameof(limit),
+                        Locales.Locales.Commands_List_Exceptions_LimitArgument);
 
                 var table = new Table()
                     .AddColumn(Locales.Locales.Tables_ListCommandEntities_Id)
@@ -48,7 +49,7 @@ public class ListCommand : Command
                         entity.Id.ToString(),
                         entity.Name,
                         $"[red]{entity.Position.X}[/], [green]{entity.Position.Y}[/], [blue]{entity.Position.Z}[/]",
-                        $"[red]{entity.Rotation.X}[/], [green]{entity.Rotation.Y}[/], [blue]{entity.Rotation.Z}[/], [yellow]{entity.Rotation.W}[/]",
+                        $"[red]{entity.Rotation.X}[/], [green]{entity.Rotation.Y}[/]",
                         entity.WorldId);
                 }
 

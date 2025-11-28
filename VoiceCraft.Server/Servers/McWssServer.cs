@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
-using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using LiteNetLib.Utils;
 using Spectre.Console;
 using VoiceCraft.Core;
@@ -9,23 +8,21 @@ using VoiceCraft.Core.Network;
 using VoiceCraft.Core.Network.McApiPackets;
 using VoiceCraft.Core.Network.McWssPackets;
 using VoiceCraft.Server.Config;
-using WatsonWebsocket;
+using Fleck;
 
 namespace VoiceCraft.Server.Servers;
 
 public class McWssServer
 {
-    private static readonly string SubscribePacket = JsonSerializer.Serialize(new McWssEventSubscribe("PlayerMessage"));
-    private static readonly Regex RawtextRegex = new(Regex.Escape("vc:mcwss_api"));
     private static readonly Version McWssVersion = new(1, 1, 0);
+
+    private readonly ConcurrentDictionary<IWebSocketConnection, McApiNetPeer> _mcApiPeers = [];
+    private readonly NetDataReader _reader = new();
+    private readonly NetDataWriter _writer = new();
+    private WebSocketServer? _wsServer;
 
     //Public Properties
     public McWssConfig Config { get; private set; } = new();
-
-    private readonly ConcurrentDictionary<ClientMetadata, McApiNetPeer> _mcApiPeers = [];
-    private readonly NetDataReader _reader = new();
-    private readonly NetDataWriter _writer = new();
-    private WatsonWsServer? _wsServer;
 
     public void Start(McWssConfig? config = null)
     {
@@ -37,40 +34,43 @@ public class McWssServer
         try
         {
             AnsiConsole.WriteLine(Locales.Locales.McWssServer_Starting);
-            _wsServer = new WatsonWsServer(port: (int)Config.Port);
+            _wsServer = new WebSocketServer(Config.Hostname);
 
-            _wsServer.ClientConnected += OnClientConnected;
-            _wsServer.ClientDisconnected += OnClientDisconnected;
-            _wsServer.MessageReceived += OnMessageReceived;
-
-            _wsServer.Start();
+            _wsServer.Start(socket =>
+            {
+                socket.OnOpen = () => OnClientConnected(socket);
+                socket.OnClose = () => OnClientDisconnected(socket);
+                socket.OnMessage = message => OnMessageReceived(socket, message);
+            });
             AnsiConsole.MarkupLine($"[green]{Locales.Locales.McWssServer_Success}[/]");
         }
-        catch
+        catch (Exception ex)
         {
-            if (_wsServer == null) throw new Exception(Locales.Locales.McWssServer_Exceptions_Failed);
-            _wsServer.ClientConnected -= OnClientConnected;
-            _wsServer.ClientDisconnected += OnClientDisconnected;
-            _wsServer.MessageReceived += OnMessageReceived;
-            throw new Exception(Locales.Locales.McWssServer_Exceptions_Failed);
+            throw new Exception(Locales.Locales.McWssServer_Exceptions_Failed, ex);
         }
     }
 
     public void Update()
     {
-        foreach (var peer in _mcApiPeers)
-        {
-            UpdatePeer(peer);
-        }
+        foreach (var peer in _mcApiPeers) UpdatePeer(peer);
     }
 
     public void Stop()
     {
         if (_wsServer == null) return;
         AnsiConsole.WriteLine(Locales.Locales.McWssServer_Stopping);
-        _wsServer.ClientConnected -= OnClientConnected;
-        _wsServer.ClientDisconnected -= OnClientDisconnected;
-        _wsServer.MessageReceived -= OnMessageReceived;
+        foreach (var client in _mcApiPeers)
+        {
+            try
+            {
+                client.Key.Close();
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteException(ex);
+            }
+        }
+
         _wsServer.Dispose();
         _wsServer = null;
         AnsiConsole.MarkupLine($"[green]{Locales.Locales.McWssServer_Stopped}[/]");
@@ -84,24 +84,23 @@ public class McWssServer
         netPeer.SendPacket(_writer);
     }
 
-    private void SendPacket(Guid clientGuid, McApiPacket packet)
+    private void SendPacket(IWebSocketConnection socket, McApiPacket packet)
     {
         _writer.Reset();
         _writer.Put((byte)packet.PacketType);
         packet.Serialize(_writer);
-        SendPacket(clientGuid, _writer.CopyData());
+        SendPacket(socket, Z85.GetStringWithPadding(_writer.CopyData()));
     }
 
-    private void SendPacket(Guid clientGuid, byte[] packetData)
+    private void SendPacket(IWebSocketConnection socket, string packetData)
     {
-        var packet = new McWssCommandRequest($"scriptevent vc:mcwss_api {Z85.GetStringWithPadding(packetData)}");
-        _wsServer?.SendAsync(clientGuid, JsonSerializer.Serialize(packet));
+        var packet = new McWssCommandRequest($"{Config.TunnelCommand} \"{packetData}\"");
+        socket.Send(JsonSerializer.Serialize(packet));
     }
 
-    private void UpdatePeer(KeyValuePair<ClientMetadata, McApiNetPeer> peer)
+    private void UpdatePeer(KeyValuePair<IWebSocketConnection, McApiNetPeer> peer)
     {
         while (peer.Value.RetrieveInboundPacket(out var packetData))
-        {
             try
             {
                 _reader.Clear();
@@ -114,49 +113,63 @@ public class McWssServer
             {
                 //Do Nothing
             }
+
+        var first = true;
+        var stringBuilder = new StringBuilder();
+        while (peer.Value.RetrieveOutboundPacket(out var outboundPacket))
+        {
+            if(!first)
+                stringBuilder.Append('|');
+            else
+                first = false;
+            stringBuilder.Append(Z85.GetStringWithPadding(outboundPacket));
         }
 
-        while (peer.Value.RetrieveOutboundPacket(out var outboundPacketData))
-        {
-            SendPacket(peer.Key.Guid, outboundPacketData);
-        }
+        SendPacket(peer.Key, stringBuilder.ToString());
 
-        if (peer.Value.Connected && peer.Value.LastPing.Add(TimeSpan.FromSeconds(5)) <= DateTime.UtcNow)
+        switch (peer.Value.Connected)
         {
-            peer.Value.Disconnect();
+            case true when DateTime.UtcNow - peer.Value.LastPing >= TimeSpan.FromMilliseconds(Config.MaxTimeoutMs):
+                peer.Value.Disconnect();
+                break;
+            case true when DateTime.UtcNow - peer.Value.LastPing >= TimeSpan.FromMilliseconds(Config.PingIntervalMs):
+                SendPacket(peer.Value, new McApiPingPacket(peer.Value.Token));
+                break;
         }
     }
 
-    private void OnClientConnected(object? sender, ConnectionEventArgs e)
+    private void OnClientConnected(IWebSocketConnection socket)
     {
+        if (_mcApiPeers.Count >= Config.MaxClients)
+            socket.Close(); //Full.
+
         var netPeer = new McApiNetPeer();
-        _mcApiPeers.TryAdd(e.Client, netPeer);
-        e.Client.Metadata = netPeer;
-        _wsServer?.SendAsync(e.Client.Guid, SubscribePacket);
+        _mcApiPeers.TryAdd(socket, netPeer);
     }
 
-    private void OnClientDisconnected(object? sender, DisconnectionEventArgs e)
+    private void OnClientDisconnected(IWebSocketConnection socket)
     {
-        if (_mcApiPeers.TryRemove(e.Client, out var netPeer))
-        {
-            netPeer.Disconnect();
-        }
+        if (_mcApiPeers.TryRemove(socket, out var netPeer)) netPeer.Disconnect();
     }
 
-    private void OnMessageReceived(object? sender, MessageReceivedEventArgs e)
+    private void OnMessageReceived(IWebSocketConnection socket, string message)
     {
         try
         {
-            if (e.MessageType != WebSocketMessageType.Text)
-                return;
-
-            var genericPacket = JsonSerializer.Deserialize<McWssGenericPacket>(e.Data);
+            var genericPacket = JsonSerializer.Deserialize<McWssGenericPacket>(message);
             if (genericPacket == null) return;
 
             switch (genericPacket.header.messagePurpose)
             {
-                case "event":
-                    HandleEventPacket(e.Client, genericPacket, e.Data);
+                case "commandResponse":
+                    var commandResponsePacket = JsonSerializer.Deserialize<McWssCommandResponse>(message);
+                    if (commandResponsePacket != null && _mcApiPeers.TryGetValue(socket, out var peer) &&
+                        !string.IsNullOrWhiteSpace(commandResponsePacket.StatusMessage) &&
+                        commandResponsePacket.StatusCode == 0)
+                    {
+                        peer.ReceiveInboundPacket(Z85.GetBytesWithPadding(commandResponsePacket.StatusMessage));
+                    }
+
                     break;
             }
         }
@@ -166,32 +179,14 @@ public class McWssServer
         }
     }
 
-    private void HandleEventPacket(ClientMetadata client, McWssGenericPacket packet, ArraySegment<byte> data)
-    {
-        switch (packet.header.eventName)
-        {
-            case "PlayerMessage":
-                var playerMessagePacket = JsonSerializer.Deserialize<McWssPlayerMessageEvent>(data);
-                if (playerMessagePacket == null || playerMessagePacket.Receiver != playerMessagePacket.Sender) return;
-                var rawtextMessage = JsonSerializer.Deserialize<Rawtext>(playerMessagePacket.Message)?.rawtext.FirstOrDefault();
-                if (rawtextMessage == null || !rawtextMessage.text.StartsWith("vc:mcwss_api")) return;
-                if (_mcApiPeers.TryGetValue(client, out var peer))
-                {
-                    var textData = RawtextRegex.Replace(rawtextMessage.text, "", 1);
-                    peer.ReceiveInboundPacket(Z85.GetBytesWithPadding(textData));
-                }
-
-                break;
-        }
-    }
-
-    private void HandlePacket(McApiPacketType packetType, NetDataReader reader, ClientMetadata client, McApiNetPeer peer)
+    private void HandlePacket(McApiPacketType packetType, NetDataReader reader, IWebSocketConnection socket,
+        McApiNetPeer peer)
     {
         if (packetType == McApiPacketType.Login)
         {
             var loginPacket = new McApiLoginPacket();
             loginPacket.Deserialize(reader);
-            HandleLoginPacket(loginPacket, client, peer);
+            HandleLoginPacket(loginPacket, socket, peer);
             return;
         }
 
@@ -213,57 +208,46 @@ public class McWssServer
             case McApiPacketType.Login:
             case McApiPacketType.Accept:
             case McApiPacketType.Deny:
-            case McApiPacketType.Unknown:
-            case McApiPacketType.SetEffect:
-            case McApiPacketType.Audio:
-            case McApiPacketType.SetTitle:
-            case McApiPacketType.SetDescription:
-            case McApiPacketType.EntityCreated:
-            case McApiPacketType.EntityDestroyed:
-            case McApiPacketType.SetName:
-            case McApiPacketType.SetMute:
-            case McApiPacketType.SetDeafen:
-            case McApiPacketType.SetTalkBitmask:
-            case McApiPacketType.SetListenBitmask:
-            case McApiPacketType.SetPosition:
-            case McApiPacketType.SetRotation:
             default:
                 break;
         }
     }
 
-    private void HandleLoginPacket(McApiLoginPacket packet, ClientMetadata client, McApiNetPeer netPeer)
+    private void HandleLoginPacket(McApiLoginPacket packet, IWebSocketConnection socket, McApiNetPeer netPeer)
     {
         if (netPeer.Connected)
         {
-            SendPacket(netPeer, new McApiAcceptPacket(netPeer.SessionToken));
+            SendPacket(netPeer, new McApiAcceptPacket(packet.RequestId, packet.Token));
             return;
         }
 
-        if (!string.IsNullOrEmpty(Config.LoginToken) && Config.LoginToken != packet.LoginToken)
+        if (!string.IsNullOrEmpty(Config.LoginToken) && Config.LoginToken != packet.Token)
         {
-            SendPacket(client.Guid, new McApiDenyPacket("McApi.DisconnectReason.InvalidLoginToken"));
+            SendPacket(socket,
+                new McApiDenyPacket(packet.RequestId, packet.Token, "VcMcApi.DisconnectReason.InvalidLoginToken"));
             return;
         }
+
         if (packet.Version.Major != McWssVersion.Major || packet.Version.Minor != McWssVersion.Minor)
         {
-            SendPacket(client.Guid, new McApiDenyPacket("McApi.DisconnectReason.IncompatibleVersion"));
+            SendPacket(socket,
+                new McApiDenyPacket(packet.RequestId, packet.Token, "VcMcApi.DisconnectReason.IncompatibleVersion"));
             return;
         }
 
         netPeer.AcceptConnection(Guid.NewGuid().ToString());
-        SendPacket(netPeer, new McApiAcceptPacket(netPeer.SessionToken));
+        SendPacket(netPeer, new McApiAcceptPacket(packet.RequestId, netPeer.Token));
     }
 
     private static void HandleLogoutPacket(McApiLogoutPacket packet, McApiNetPeer netPeer)
     {
-        if (netPeer.SessionToken != packet.SessionToken) return;
+        if (netPeer.Token != packet.Token) return;
         netPeer.Disconnect();
     }
 
     private void HandlePingPacket(McApiPingPacket packet, McApiNetPeer netPeer)
     {
-        if (netPeer.SessionToken != packet.SessionToken) return; //Needs a session token at least.
+        if (netPeer.Token != packet.Token) return; //Needs a session token at least.
         SendPacket(netPeer, packet); //Reuse the packet.
     }
 

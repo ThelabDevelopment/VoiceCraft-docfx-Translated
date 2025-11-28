@@ -68,6 +68,13 @@
       "Network": "Netwerk Instellingen",
       "McWssHostPort": "MCWSS host poort"
     },
+    "HotKey": {
+      "HotKey": null,
+      "Actions": {
+        "Mute": null,
+        "Deafen": null
+      }
+    },
     "Advanced": {
       "Advanced": "Geavanceerde instellingen",
       "TriggerGc": "Trigger Garbage Collector",
@@ -121,6 +128,8 @@
       "Disconnected": "Verbinding verbroken! Reden: {reason}"
     },
     "DisconnectReason": {
+      "Shutdown": null,
+      "Forced": null,
       "IncompatibleVersion": "Incompatibele client/server versie!",
       "ServerFull": "Server is vol!",
       "Error": "Er is een fout opgetreden bij het inloggen!"

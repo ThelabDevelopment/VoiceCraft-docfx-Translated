@@ -4,7 +4,9 @@ using VoiceCraft.Client.Services;
 
 namespace VoiceCraft.Client.ViewModels.Settings;
 
-public partial class AdvancedSettingsViewModel(NavigationService navigationService, NotificationService notificationService) : ViewModelBase
+public partial class AdvancedSettingsViewModel(
+    NavigationService navigationService,
+    NotificationService notificationService) : ViewModelBase
 {
     [RelayCommand]
     private void TriggerGc()
@@ -13,9 +15,10 @@ public partial class AdvancedSettingsViewModel(NavigationService navigationServi
         {
             var previousSnapshot = GC.GetTotalMemory(false);
             GC.Collect();
+            //TODO Locale This!
             notificationService.SendNotification(
-                Locales.Locales.Notification_Badges_GC,
-                $"Garbage Collection Triggered. Memory Cleared: {Math.Max(previousSnapshot - GC.GetTotalMemory(false), 0) / 1000000}mb");
+                $"Garbage Collection Triggered. Memory Cleared: {Math.Max(previousSnapshot - GC.GetTotalMemory(false), 0) / 1000000}mb",
+                Locales.Locales.Notification_Badges_GC);
         }
         catch (Exception ex)
         {

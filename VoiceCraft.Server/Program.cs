@@ -1,6 +1,7 @@
 using System.CommandLine;
-using Jeek.Avalonia.Localization;
+using Fleck;
 using Microsoft.Extensions.DependencyInjection;
+using VoiceCraft.Core.Locales;
 using VoiceCraft.Server.Commands;
 using VoiceCraft.Server.Locales;
 using VoiceCraft.Server.Servers;
@@ -13,7 +14,8 @@ public static class Program
 
     public static void Main()
     {
-        Localizer.SetLocalizer(new EmbeddedJsonLocalizer("VoiceCraft.Server.Locales"));
+        Localizer.BaseLocalizer = new EmbeddedJsonLocalizer("VoiceCraft.Server.Locales");
+        FleckLog.LogAction = (_, _, _) => { }; //Remove all websocket logs.
         App.Start().GetAwaiter().GetResult();
     }
 

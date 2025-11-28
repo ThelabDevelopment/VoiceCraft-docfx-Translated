@@ -1,13 +1,15 @@
-using VoiceCraft.Core;
 using VoiceCraft.Core.Interfaces;
-using VoiceCraft.Server.Data;
+using VoiceCraft.Core.World;
 
 namespace VoiceCraft.Server.Systems;
 
 public class VisibilitySystem(VoiceCraftWorld world, AudioEffectSystem audioEffectSystem)
 {
+    private readonly Lock _lock = new();
+
     public void Update()
     {
+        //Possible Race Condition. Will need to test further.
         Parallel.ForEach(world.Entities, UpdateVisibleNetworkEntities);
     }
 
@@ -19,25 +21,33 @@ public class VisibilitySystem(VoiceCraftWorld world, AudioEffectSystem audioEffe
         //Add any new possible entities.
         var visibleNetworkEntities = world.Entities.OfType<VoiceCraftNetworkEntity>();
         foreach (var possibleEntity in visibleNetworkEntities)
-        {
-            if (possibleEntity.Id == entity.Id) continue;
-            if (!EntityVisibility(entity, possibleEntity))
+            try
             {
-                entity.RemoveVisibleEntity(possibleEntity);
-                continue;
-            }
+                if (possibleEntity.Id == entity.Id) continue;
+                if (!EntityVisibility(entity, possibleEntity))
+                {
+                    _lock.Enter();
+                    entity.RemoveVisibleEntity(possibleEntity);
+                    continue;
+                }
 
-            entity.AddVisibleEntity(possibleEntity);
-        }
+                _lock.Enter();
+                entity.AddVisibleEntity(possibleEntity);
+            }
+            finally
+            {
+                if (_lock.IsHeldByCurrentThread)
+                    _lock.Exit();
+            }
     }
 
     private bool EntityVisibility(VoiceCraftEntity from, VoiceCraftNetworkEntity to)
     {
-        if (!from.VisibleTo(to)) return false;
+        if ((from.TalkBitmask & to.ListenBitmask) == 0) return false;
         foreach (var effect in audioEffectSystem.Effects)
         {
             if (effect.Value is not IVisible visibleEffect) continue;
-            if (!visibleEffect.Visibility(from, to)) return false;
+            if (!visibleEffect.Visibility(from, to, effect.Key)) return false;
         }
 
         return true;

@@ -11,26 +11,26 @@ namespace VoiceCraft.Core.Network
         private readonly ConcurrentQueue<byte[]> _inboundPacketQueue = new ConcurrentQueue<byte[]>();
         private readonly ConcurrentQueue<byte[]> _outboundPacketQueue = new ConcurrentQueue<byte[]>();
 
-        public event Action? OnDisconnected;
-        
         public DateTime LastPing { get; set; } = DateTime.UtcNow;
         public bool Connected { get; private set; }
-        public string SessionToken { get; private set; } = string.Empty;
+        public string Token { get; private set; } = string.Empty;
+
+        public event Action? OnDisconnected;
 
         public void Disconnect()
         {
             if (!Connected) return;
             Connected = false;
-            SessionToken = string.Empty;
+            Token = string.Empty;
             OnDisconnected?.Invoke();
-            
+
             Debug.WriteLine("McApi Client Disconnected");
         }
 
         public void AcceptConnection(string sessionToken)
         {
             if (Connected) return;
-            SessionToken = sessionToken;
+            Token = sessionToken;
             Connected = true;
             LastPing = DateTime.UtcNow;
             Debug.WriteLine($"McApi Client Connected: Session Token - {sessionToken}");
@@ -40,11 +40,11 @@ namespace VoiceCraft.Core.Network
         {
             if (packet.Length > short.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(packet));
-            
+
             LastPing = DateTime.UtcNow;
             _inboundPacketQueue.Enqueue(packet);
         }
-        
+
         public bool RetrieveInboundPacket([NotNullWhen(true)] out byte[]? packet)
         {
             return _inboundPacketQueue.TryDequeue(out packet);
@@ -55,7 +55,7 @@ namespace VoiceCraft.Core.Network
             if (!Connected) return;
             if (writer.Length > short.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(writer));
-            
+
             _outboundPacketQueue.Enqueue(writer.CopyData());
         }
 

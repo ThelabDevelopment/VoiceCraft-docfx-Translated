@@ -1,8 +1,8 @@
 using System.CommandLine;
-using Jeek.Avalonia.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 using VoiceCraft.Core;
+using VoiceCraft.Core.Locales;
 using VoiceCraft.Server.Servers;
 
 namespace VoiceCraft.Server;
@@ -20,7 +20,7 @@ public static class App
         var httpServer = Program.ServiceProvider.GetRequiredService<McHttpServer>();
         var rootCommand = Program.ServiceProvider.GetRequiredService<RootCommand>();
         var properties = Program.ServiceProvider.GetRequiredService<ServerProperties>();
-        
+
         try
         {
             //Startup.
@@ -29,8 +29,10 @@ public static class App
 
             //Properties
             properties.Load();
-            Localizer.Language = properties.VoiceCraftConfig.Language; //Set locale. May not set the first 2 messages, but it works.
-            Console.Title = $"VoiceCraft - {VoiceCraftServer.Version}: {Locales.Locales.Title_Starting}"; //Loaded, Set the title.
+            Localizer.Instance.Language =
+                properties.VoiceCraftConfig.Language; //Set locale. May not set the first 2 messages, but it works.
+            Console.Title =
+                $"VoiceCraft - {VoiceCraftServer.Version}: {Locales.Locales.Title_Starting}"; //Loaded, Set the title.
 
             //Server Startup
             server.Start(properties.VoiceCraftConfig);
@@ -45,8 +47,8 @@ public static class App
                 .AddColumn(Locales.Locales.Tables_ServerSetup_Protocol);
 
             serverSetupTable.AddRow("[green]VoiceCraft[/]", server.Config.Port.ToString(), "[aqua]UDP[/]");
-            serverSetupTable.AddRow("[green]McWss[/]", mcWssServer.Config.Port.ToString(), "[aqua]TCP/WS[/]");
-            serverSetupTable.AddRow("[green]McHttp[/]", httpServer.Config.Port.ToString(), "[aqua]TCP/HTTP[/]");
+            serverSetupTable.AddRow("[green]McWss[/]", mcWssServer.Config.Hostname, "[aqua]TCP/WS[/]");
+            serverSetupTable.AddRow("[green]McHttp[/]", httpServer.Config.Hostname, "[aqua]TCP/HTTP[/]");
 
             //Register Commands
             AnsiConsole.WriteLine(Locales.Locales.Startup_Commands_Registering);
@@ -58,7 +60,8 @@ public static class App
                 commandCount++;
             }
 
-            AnsiConsole.MarkupLine($"[green]{Locales.Locales.Startup_Commands_Success.Replace("{commands}", commandCount.ToString())}[/]");
+            AnsiConsole.MarkupLine(
+                $"[green]{Locales.Locales.Startup_Commands_Success.Replace("{commands}", commandCount.ToString())}[/]");
 
             //Server finished.
             AnsiConsole.Write(serverSetupTable);
@@ -79,6 +82,7 @@ public static class App
                     if (delay > 0)
                         await Task.Delay((int)delay);
                     startTime = DateTime.UtcNow;
+                    //Console.WriteLine(delay);
                 }
                 catch (Exception ex)
                 {
@@ -112,7 +116,8 @@ public static class App
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]{Locales.Locales.Commands_Exception.Replace("{commandName}", _bufferedCommand)}[/]");
+            AnsiConsole.MarkupLine(
+                $"[red]{Locales.Locales.Commands_Exception.Replace("{commandName}", _bufferedCommand)}[/]");
             AnsiConsole.WriteException(ex);
         }
 

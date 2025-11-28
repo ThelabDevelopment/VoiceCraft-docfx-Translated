@@ -4,25 +4,18 @@ namespace VoiceCraft.Core
 
     public enum PositioningType : byte
     {
-        Unknown,
         Server,
         Client
     }
 
-    public enum EntityType : byte
-    {
-        Unknown,
-        Server,
-        Network
-    }
-
     public enum PacketType : byte
     {
-        Unknown,
         Info,
         Login,
+        Logout,
+        SetId,
         SetEffect,
-        
+
         //Client Entity Stuff
         Audio,
         SetTitle,
@@ -30,6 +23,7 @@ namespace VoiceCraft.Core
 
         //Entity stuff
         EntityCreated,
+        NetworkEntityCreated,
         EntityDestroyed,
         SetVisibility,
         SetName,
@@ -37,57 +31,20 @@ namespace VoiceCraft.Core
         SetDeafen,
         SetTalkBitmask,
         SetListenBitmask,
+        SetEffectBitmask,
         SetPosition,
-        SetRotation
+        SetRotation,
+        SetCaveFactor,
+        SetMuffleFactor
     }
 
     public enum McApiPacketType : byte
     {
-        Unknown,
         Login,
         Logout,
         Ping,
         Accept,
-        Deny,
-        
-        //Server Stuff
-        SetEffect,
-        
-        //Client Entity Stuff
-        Audio,
-        SetTitle,
-        SetDescription,
-        
-        //Entity stuff
-        EntityCreated,
-        EntityDestroyed,
-        SetName,
-        SetMute,
-        SetDeafen,
-        SetTalkBitmask,
-        SetListenBitmask,
-        SetPosition,
-        SetRotation
-    }
-
-    #endregion
-
-    #region Properties
-
-    public enum PropertyKey : ushort
-    {
-        Unknown,
-        ProximityEffectMinRange,
-        ProximityEffectMaxRange
-    }
-
-    public enum PropertyType : byte
-    {
-        Null,
-        Byte,
-        Int,
-        UInt,
-        Float
+        Deny
     }
 
     #endregion
@@ -96,8 +53,12 @@ namespace VoiceCraft.Core
 
     public enum EffectType : byte
     {
-        Unknown,
-        Proximity
+        None,
+        Visibility,
+        Proximity,
+        Directional,
+        ProximityEcho,
+        Echo
     }
 
     public enum AudioFormat

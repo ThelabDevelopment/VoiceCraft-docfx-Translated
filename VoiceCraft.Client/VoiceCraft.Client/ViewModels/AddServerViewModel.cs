@@ -6,7 +6,10 @@ using VoiceCraft.Client.Services;
 
 namespace VoiceCraft.Client.ViewModels;
 
-public partial class AddServerViewModel(NotificationService notificationService, SettingsService settings, NavigationService navigationService) : ViewModelBase
+public partial class AddServerViewModel(
+    NotificationService notificationService,
+    SettingsService settings,
+    NavigationService navigationService) : ViewModelBase
 {
     [ObservableProperty] private Server _server = new();
 
@@ -25,7 +28,9 @@ public partial class AddServerViewModel(NotificationService notificationService,
         {
             Servers.AddServer(Server);
 
-            notificationService.SendSuccessNotification(Locales.Locales.Notification_Badges_Servers, $"{Server.Name} has been added.");
+            //TODO Locale This!
+            notificationService.SendSuccessNotification($"{Server.Name} has been added.",
+                Locales.Locales.Notification_Badges_Servers);
             Server = new Server();
             _ = settings.SaveAsync();
             navigationService.Back();
